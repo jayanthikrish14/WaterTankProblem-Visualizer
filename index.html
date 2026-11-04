@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Water Tank Problem - Visualizer</title>
+    <style>
+        :root {
+            --bg-color: #f4f7f6;
+            --card-bg: #ffffff;
+            --primary-color: #2c3e50;
+            --wall-color: #f1c40f; 
+            --water-color: #3498db; 
+            --border-color: #bdc3c7;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 40px 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            box-sizing: border-box;
+        }
+
+        .container {
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.1);
+            max-width: 800px;
+            width: 100%;
+        }
+
+        h1 {
+            color: var(--primary-color);
+            margin-top: 0;
+            font-size: 24px;
+            border-bottom: 2px solid #ecf0f1;
+            padding-bottom: 10px;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #34495e;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            font-size: 16px;
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background-color: #1a252f;
+        }
+
+        .result-box {
+            margin-top: 25px;
+            padding: 15px;
+            background-color: #ecf0f1;
+            border-radius: 6px;
+            font-size: 18px;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+
+        .visualization-container {
+            margin-top: 30px;
+            overflow-x: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            background: #fafafa;
+            padding: 20px;
+        }
+
+        svg {
+            display: block;
+            margin: 0 auto;
+        }
+
+        .grid-line {
+            stroke: #e0e0e0;
+            stroke-width: 1;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Water Tank Problem Visualizer</h1>
+    
+    <div class="input-group">
+        <label for="arrayInput">Enter block heights (comma-separated integers):</label>
+        <input type="text" id="arrayInput" value="0,4,0,0,0,6,0,6,4,0" placeholder="e.g. 0,4,0,0,0,6,0,6,4,0">
+    </div>
+    
+    <button onclick="processWaterTank()">Compute & Visualize</button>
+
+    <div class="result-box" id="resultOutput">
+        Output: 18 Units
+    </div>
+
+    <div class="visualization-container">
+        <svg id="visualizerSvg" width="100%" height="300"></svg>
+    </div>
+</div>
+
+<script>
+    function calculateWaterLayout(heights) {
+        const n = heights.length;
+        const leftMax = new Array(n).fill(0);
+        const rightMax = new Array(n).fill(0);
+        const waterTrapped = new Array(n).fill(0);
+        
+        if (n === 0) return { total: 0, water: [] };
+
+        leftMax[0] = heights[0];
+        for (let i = 1; i < n; i++) {
+            leftMax[i] = Math.max(leftMax[i - 1], heights[i]);
+        }
+
+        rightMax[n - 1] = heights[n - 1];
+        for (let i = n - 2; i >= 0; i--) {
+            rightMax[i] = Math.max(rightMax[i + 1], heights[i]);
+        }
+
+        let totalWater = 0;
+        for (let i = 0; i < n; i++) {
+            const trapped = Math.min(leftMax[i], rightMax[i]) - heights[i];
+            waterTrapped[i] = trapped > 0 ? trapped : 0;
+            totalWater += waterTrapped[i];
+        }
+
+        return { total: totalWater, water: waterTrapped };
+    }
+
+    function renderSVG(heights, water) {
+        const svg = document.getElementById('visualizerSvg');
+        svg.innerHTML = ''; 
+
+        const n = heights.length;
+        if (n === 0) return;
+
+        const maxBarHeight = Math.max(...heights, 1);
+        const gridRows = maxBarHeight + 1; 
+        
+        const svgHeight = 300;
+        const cellHeight = svgHeight / gridRows;
+        const cellWidth = 50; 
+        const svgWidth = n * cellWidth;
+        
+        svg.setAttribute('width', svgWidth);
+        svg.setAttribute('height', svgHeight);
+
+        for (let r = 0; r <= gridRows; r++) {
+            const y = r * cellHeight;
+            const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            line.setAttribute("x1", 0);
+            line.setAttribute("y1", y);
+            line.setAttribute("x2", svgWidth);
+            line.setAttribute("y2", y);
+            line.setAttribute("class", "grid-line");
+            svg.appendChild(line);
+        }
+        for (let c = 0; c <= n; c++) {
+            const x = c * cellWidth;
+            const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            line.setAttribute("x1", x);
+            line.setAttribute("y1", 0);
+            line.setAttribute("x2", x);
+            line.setAttribute("y2", svgHeight);
+            line.setAttribute("class", "grid-line");
+            svg.appendChild(line);
+        }
+
+        for (let i = 0; i < n; i++) {
+            const x = i * cellWidth;
+            
+            if (water[i] > 0) {
+                const waterH = water[i] * cellHeight;
+                const waterY = svgHeight - (heights[i] + water[i]) * cellHeight;
+                
+                const rectWater = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                rectWater.setAttribute("x", x + 1);
+                rectWater.setAttribute("y", waterY + 1);
+                rectWater.setAttribute("width", cellWidth - 2);
+                rectWater.setAttribute("height", waterH - 2);
+                rectWater.setAttribute("fill", "var(--water-color)");
+                svg.appendChild(rectWater);
+            }
+
+            if (heights[i] > 0) {
+                const blockH = heights[i] * cellHeight;
+                const blockY = svgHeight - blockH;
+                
+                const rectBlock = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                rectBlock.setAttribute("x", x + 1);
+                rectBlock.setAttribute("y", blockY + 1);
+                rectBlock.setAttribute("width", cellWidth - 2);
+                rectBlock.setAttribute("height", blockH - 2);
+                rectBlock.setAttribute("fill", "var(--wall-color)");
+                svg.appendChild(rectBlock);
+            }
+        }
+    }
+
+    function processWaterTank() {
+        const inputVal = document.getElementById('arrayInput').value;
+        const heights = inputVal.split(',')
+                                .map(val => parseInt(val.trim(), 10))
+                                .filter(val => !isNaN(val));
+
+        if (heights.some(h => h < 0)) {
+            alert("Block heights must be non-negative integers.");
+            return;
+        }
+
+        const result = calculateWaterLayout(heights);
+        document.getElementById('resultOutput').innerText = `Output: ${result.total} Units`;
+        renderSVG(heights, result.water);
+    }
+
+    // Run initial visualization on page load
+    window.onload = processWaterTank;
+</script>
+
+</body>
+</html>
